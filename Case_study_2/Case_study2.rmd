@@ -1,0 +1,185 @@
+---
+title: "Case_Study2"
+author: "Chao Li"
+date: "Updated on: `r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    self_contained: yes
+    number_sections: True
+    theme: cosmo
+    toc: True
+  pdf_document:
+    number_sections: True
+  always_allow_html: true
+---
+
+
+```{r include=FALSE}
+pacman::p_load(tidyverse, ggplot2,kableExtra)
+```
+
+
+```{r include=FALSE}
+data <- read.csv('data/casestudy.csv',row.names = 1)
+data %>% glimpse() 
+```
+
+# Required Information
+
+## Total revenue for the current year
+```{r echo=FALSE}
+data %>% group_by(year) %>% summarise(Total_y = sum(net_revenue)) %>%   kable() %>% 
+  kable_styling(bootstrap_options='striped',full_width=F,position = 'center')
+```
+
+## New Customer Revenue 
+```{r echo=FALSE}
+df = data%>% 
+  pivot_wider(names_from = year,values_from = net_revenue) %>% 
+  mutate(new2016 = if_else(is.na(`2015`)&(!is.na(`2016`)),1,0),
+         new2017 = if_else(is.na(`2016`)&(!is.na(`2017`)),1,0)) 
+  
+new.2016 <- df %>% filter(new2016 == 1) %>% summarise(new_2016 = sum(`2016`))
+new.2017 <- df %>% filter(new2017 == 1) %>% summarise(new_2017 = sum(`2017`))
+cbind(new.2016,new.2017) %>% kable() %>% 
+  kable_styling(bootstrap_options='striped',full_width=F,position = 'center')
+```
+
+## Existing Customer Growth.
+
+```{r echo=FALSE}
+df <- df%>% 
+  mutate(exist2016 = if_else(!is.na(`2015`)&(!is.na(`2016`)),1,0),
+         exist2017 = if_else(!is.na(`2016`)&(!is.na(`2017`)),1,0)) 
+
+growth.2016 <- df %>% 
+  filter(exist2016 == 1) %>% 
+  summarise(growth_2016 = sum(`2016`)-sum(`2015`))
+
+growth.2017 <- df %>% 
+  filter(exist2017 == 1) %>% 
+  summarise(growth_2017 = sum(`2017`)-sum(`2016`))
+
+cbind(growth.2016,growth.2017) %>% kable() %>% 
+  kable_styling(bootstrap_options='striped',full_width=F,position = 'center')
+```
+
+## Revenue lost from attrition
+```{r echo=FALSE}
+df <- df%>% 
+  mutate(lost2016 = if_else(!is.na(`2015`)&(is.na(`2016`)),1,0),
+         lost2017 = if_else(!is.na(`2016`)&(is.na(`2017`)),1,0)) 
+
+lost.2016 <-df %>% 
+  filter(lost2016 == 1) %>% 
+  summarise(lost2016 = sum(`2015`))
+
+lost.2017 <- df %>% 
+  filter(lost2017 == 1) %>% 
+  summarise(lost2017 = sum(`2016`))
+
+cbind(lost.2016,lost.2017) %>% kable() %>% 
+  kable_styling(bootstrap_options='striped',full_width=F,position = 'center')
+```
+
+## Existing Customer Revenue Current Year
+```{r echo=FALSE}
+y2016 <- df %>% 
+  filter(exist2016 == 1) %>% 
+  summarise(`2016` = sum(`2016`))
+row.names(y2016) <- 'Revenue'
+
+y2017 <- df %>% 
+  filter(exist2017 == 1) %>% 
+  summarise(`2017` = sum(`2017`)) 
+row.names(y2017) <- 'Revenue'
+
+cbind(y2016,y2017) %>% kable() %>% 
+  kable_styling(bootstrap_options='striped',full_width=F,position = 'center')
+```
+##	Existing Customer Revenue Prior Year
+
+```{r echo=FALSE}
+y2016 <- df %>% 
+  filter(exist2016 == 1) %>% 
+  summarise(`2016` = sum(`2015`))
+row.names(y2016) <- 'Revenue'
+
+y2017 <- df %>% 
+  filter(exist2017 == 1) %>% 
+  summarise(`2017` = sum(`2016`)) 
+row.names(y2017) <- 'Revenue'
+
+cbind(y2016,y2017) %>% kable() %>% 
+  kable_styling(bootstrap_options='striped',full_width=F,position = 'center')
+```
+## Total Customers Current Year
+
+```{r echo=FALSE}
+data %>% group_by(year) %>% summarise(Count = length(unique(customer_email))) %>% kable() %>% 
+  kable_styling(bootstrap_options='striped',full_width=F,position = 'center')
+```
+## Total Customers Previous Year
+
+This result is same as the previous one
+
+```{r echo=FALSE}
+data %>% group_by(year) %>% summarise(Count = length(unique(customer_email))) %>% kable() %>% 
+  kable_styling(bootstrap_options='striped',full_width=F,position = 'center')
+```
+## New Customers
+
+The following table only shows 5 customers of each year
+
+```{r echo=FALSE}
+y2016 <- df %>% filter(new2016 == 1) %>% select(customer_email)
+colnames(y2016) <- '2016'
+
+y2017 <- df %>% filter(new2017 == 1) %>% select(customer_email)
+colnames(y2017) <- '2017'
+  
+cbind(y2016[1:5,],y2017[1:5,])%>% kable() %>% 
+  kable_styling(bootstrap_options='striped',full_width=F,position = 'center')
+```
+##	Lost Customers
+
+The following table only shows 5 customers of each year
+
+```{r echo=FALSE}
+y2016 <- df %>% filter(lost2016 == 1) %>% select(customer_email)
+colnames(y2016) <- '2016'
+
+y2017 <- df %>% filter(lost2017 == 1) %>% select(customer_email)
+colnames(y2017) <- '2017'
+  
+cbind(y2016[1:5,],y2017[1:5,])%>% kable() %>% 
+  kable_styling(bootstrap_options='striped',full_width=F,position = 'center')
+```
+
+# Visualization
+
+## Total revenue of each year
+
+```{r echo=FALSE}
+data %>% 
+  group_by(year) %>% 
+  summarise(Total_revenue = sum(net_revenue)) %>% 
+  ggplot(aes(x = year,y = Total_revenue))+
+  geom_bar(stat = "identity")+
+  labs(title = 'Total revenue of each year')
+```
+
+The revenue in 2016 is lower than other years.
+
+## Total revenue of each year
+
+```{r echo=FALSE}
+data %>% mutate(year = as.character(year)) %>% 
+  ggplot(aes(x = year,y = net_revenue, fill = year))+
+  geom_boxplot()+
+  labs(title = 'Box plot of revenue in each year')
+```
+
+All three years has similar revenue structure where they have same customer revenue distribution.
+
+
